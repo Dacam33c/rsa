@@ -43,10 +43,8 @@ def GeradorPrimos():
     while(True):
         n = randint(2**1024,(2**1025)-1)
         teste +=1
-        print(teste)
         if(MillerRabin(n,10)):
-            print(n)
-            return True
+            return n
 
 #N1 deve ser maior que N2
 def euclides(n1,n2):
@@ -61,11 +59,19 @@ def makeKey(primo1,primo2):
     
     n = primo1 * primo2
     phi = (primo1 - 1) * (primo2 - 1)
-    
-    e = randint(1,n)
-    
-    if (phi % e == 0):
-         print("Φ = e")
-         return 0
-        
+    e = randint(1,phi)
     #CHAMAR FUNÇÃO DE EUCLIDES COM N1>N2!!!!!!!!!
+    while (not euclides(phi,e)):
+        e = randint(1,phi)
+        
+    #d é o inverso multiplicativo mod phi de e
+    #significa que, ao multiplicar d * e e entao tirar mod phi o resultado será 1
+    
+    d = pow(e, -1, phi)
+    print("phi:", phi)
+    print("chave pública e:",e)
+    print("chave privada d:",d)
+    return e,d
+
+publicKey,privateKey = makeKey(GeradorPrimos(),GeradorPrimos())
+
