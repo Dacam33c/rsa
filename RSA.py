@@ -5,6 +5,7 @@ import random as rand
 import os
 import base64
 import hashlib
+import traceback
 
 def binToString(bin0,size):
     string = str(bin0)[2:]
@@ -82,39 +83,37 @@ def makeKey(primo1,primo2):
 # publicKey,privateKey = makeKey(GeradorPrimos(),GeradorPrimos())
 
 
-''' função pra gerar arquivo base 64 da mensagem (bytes do arquivo), hash da mensagem
-    e os outras informações para verificação.
-    o arquivo terá a seguinte estrutrura:
-        - primeiros n (tamanho fixo) bytes -> hash criptografado do arquivo da mensagem
-        - byte seguinte -> numero 'c' de caracteres de extensão do arquivo da mensagem
-        - próximos c bytes - extensão do arquivo da mensagem
-        - resto dos bytes - arquivo da mensagem
+''' 
+    função pra assinar um arquivo, gerando um arquivo em base 64 da mensagem (bytes do arquivo) e
+    hash da mensagem.
+    os primeiros bytes do arquivo são o hash criptografado gerado a partir da mensagem cri (tamanho fixo).
+    os restos dos bytes são do arquivo da msg original
 '''
-def codificar_base64( file_path:str ):
+def assinar_arquivo( file_name_ext:str ):
 
-    # tenta ler arquivo como bytes, retorna None em caso de erro
+    # tenta ler arquivo da mensagem como bytes, retorna None em caso de erro
     try:
-        with open(file_path, 'rb') as f:
-            file_bytes = f.read()
+        with open(file_name_ext, 'rb') as f:
+            msg_bytes = f.read()
     except Exception as exc:
-        print(f'ERRO!!!:\n{exc}')
+        print(f'\nERRO!!!:\n{exc}\n')
+        print(traceback.format_exc())
         return None
 
-    # caso não dê erro na leitura dos bytes do arquivo
+    # caso não dê erro na leitura dos bytes do arquivo:
     # calcula hash sha3-512 dos bytes do arquivo como um string
-    hash_str = hashlib.sha3_512(file_bytes).hexdigest()
+    hash_str = hashlib.sha3_512(msg_bytes).hexdigest()
 
     # codifica string do hash calculado para bytes utf-8
     hash_bytes = hash_str.encode(encoding = "utf-8")
 
     # hash_bytes = encriptar_rsa(hash_bytes, key, ...)
 
-    # obtém extensão do arquivo
-    file_name, file_extension = os.path.splitext(file_path)
-    num_char_file_ext = len(file_extension) - 1 # ignora o '.'
+    # obtém nome e extensão do arquivo
+    file_name, _ = os.path.splitext(file_name_ext)
 
     # constroi sequencia de bytes do arquivo final (assinado)
-    msg_signed = hash_bytes + num_char_file_ext.to_bytes(1, 'big') + file_extension[1:].encode(encoding = "utf-8") + file_bytes
+    msg_signed = hash_bytes + msg_bytes
 
     # converte para base64
     msg_signed_b64 = base64.b64encode(msg_signed)
@@ -123,10 +122,39 @@ def codificar_base64( file_path:str ):
     try:
         with open(f'./{file_name}_signed.b64', 'wb') as f:
             f.write(msg_signed_b64)
+        print(f'\narquivo assinado em b64 gerado e salvo como "./{file_name}_signed.b64"\n')
     except Exception as exc:
-        print(f"ERRO!!!:\n{exc}")
+        print(f"\nERRO!!!:\n{exc}\n")
+        print(traceback.format_exc())
 
-    return msg_signed_b64
+
+'''
+    função para verificar a assinatura, decodificando o arquivo b64 gerado na função anterior, a partir
+    dos mesmos critérios
+'''
+def verificar_assinatura( b64_file_name:str ):
+    # tenta ler arquivo .b64 como string. retorna None em caso de erro
+    try:
+        with open(b64_file_name, 'r') as f:
+            b64_file = f.read()
+    except Exception as exc:
+        print(f'\nERRO!!!:\n{exc}\n')
+        print(traceback.format_exc())
+        return None
+    
+    len_hash = 128  # quantidade fixa de caracteres do hash (deve ser do criptografado, 128 é do hash em claro)
+    signed_msg_bytes = base64.b64decode(b64_file)   # decodificação base 64
+    hash_received = signed_msg_bytes[:len_hash].decode(encoding="utf-8")    # hash "recebido" no arquivo de assinatura (.b64)
+    # hash_received = decriptar(hash_received, key, ...)
+    msg_received_bytes = signed_msg_bytes[len_hash:]
+
+    hash_calculated = hashlib.sha3_512(msg_received_bytes).hexdigest()
+
+    if hash_calculated == hash_received:
+        print("assinatura validada !!! aeee :) ")
+    else:
+        print("assinatura invalidada !!!  :(")
+
 
 
 
