@@ -82,7 +82,7 @@ def makeKey(primo1,primo2):
 # publicKey,privateKey = makeKey(GeradorPrimos(),GeradorPrimos())
 
 
-''' função pra gerar arquvio base 64 da mensagem (bytes do arquivo), hash da mensagem
+''' função pra gerar arquivo base 64 da mensagem (bytes do arquivo), hash da mensagem
     e os outras informações para verificação.
     o arquivo terá a seguinte estrutrura:
         - primeiros n (tamanho fixo) bytes -> hash criptografado do arquivo da mensagem
@@ -90,12 +90,12 @@ def makeKey(primo1,primo2):
         - próximos c bytes - extensão do arquivo da mensagem
         - resto dos bytes - arquivo da mensagem
 '''
-def codificar_base64( file_path:str ) -> bytes:
+def codificar_base64( file_path:str ):
 
     # tenta ler arquivo como bytes, retorna None em caso de erro
     try:
-        with open(file_path, 'rb') as file:
-            file_bytes = file.read()
+        with open(file_path, 'rb') as f:
+            file_bytes = f.read()
     except Exception as exc:
         print(f'ERRO!!!:\n{exc}')
         return None
@@ -113,15 +113,20 @@ def codificar_base64( file_path:str ) -> bytes:
     file_name, file_extension = os.path.splitext(file_path)
     num_char_file_ext = len(file_extension) - 1 # ignora o '.'
 
-    
+    # constroi sequencia de bytes do arquivo final (assinado)
+    msg_signed = hash_bytes + num_char_file_ext.to_bytes(1, 'big') + file_extension[1:].encode(encoding = "utf-8") + file_bytes
 
-    
+    # converte para base64
+    msg_signed_b64 = base64.b64encode(msg_signed)
+
+    # tenta salvar
+    try:
+        with open(f'./{file_name}_signed.b64', 'wb') as f:
+            f.write(msg_signed_b64)
+    except Exception as exc:
+        print(f"ERRO!!!:\n{exc}")
+
+    return msg_signed_b64
 
 
 
-    
-
-    
-
-
-    
