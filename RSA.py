@@ -1,5 +1,10 @@
+
 from random import randint
 import random as rand
+
+import os
+import base64
+import hashlib
 
 def binToString(bin0,size):
     string = str(bin0)[2:]
@@ -73,5 +78,50 @@ def makeKey(primo1,primo2):
     print("chave privada d:",d)
     return e,d
 
-publicKey,privateKey = makeKey(GeradorPrimos(),GeradorPrimos())
 
+# publicKey,privateKey = makeKey(GeradorPrimos(),GeradorPrimos())
+
+
+''' função pra gerar arquvio base 64 da mensagem (bytes do arquivo), hash da mensagem
+    e os outras informações para verificação.
+    o arquivo terá a seguinte estrutrura:
+        - primeiros n (tamanho fixo) bytes -> hash criptografado do arquivo da mensagem
+        - byte seguinte -> numero 'c' de caracteres de extensão do arquivo da mensagem
+        - próximos c bytes - extensão do arquivo da mensagem
+        - resto dos bytes - arquivo da mensagem
+'''
+def codificar_base64( file_path:str ) -> bytes:
+
+    # tenta ler arquivo como bytes, retorna None em caso de erro
+    try:
+        with open(file_path, 'rb') as file:
+            file_bytes = file.read()
+    except Exception as exc:
+        print(f'ERRO!!!:\n{exc}')
+        return None
+
+    # caso não dê erro na leitura dos bytes do arquivo
+    # calcula hash sha3-512 dos bytes do arquivo como um string
+    hash_str = hashlib.sha3_512(file_bytes).hexdigest()
+
+    # codifica string do hash calculado para bytes utf-8
+    hash_bytes = hash_str.encode(encoding = "utf-8")
+
+    # hash_bytes = encriptar_rsa(hash_bytes, key, ...)
+
+    # obtém extensão do arquivo
+    file_name, file_extension = os.path.splitext(file_path)
+    num_char_file_ext = len(file_extension) - 1 # ignora o '.'
+
+    
+
+    
+
+
+
+    
+
+    
+
+
+    
