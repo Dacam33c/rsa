@@ -84,48 +84,53 @@ def makeKey(primo1,primo2):
 
 
 ''' 
-    função pra assinar um arquivo, gerando um arquivo em base 64 da mensagem (bytes do arquivo) e
-    hash da mensagem.
-    os primeiros bytes do arquivo são o hash criptografado gerado a partir da mensagem cri (tamanho fixo).
-    os restos dos bytes são do arquivo da msg original
+    função pra assinar um arquivo, gerando um arquivo em base 64 da mensagem (bytes do arquivo),
+    hash da mensagem e os outras informações para verificação.
+    o arquivo resultante terá a extensão '.b64' e possuirá a seguinte estrutrura:
+        - primeiros n (tamanho fixo) bytes -> hash criptografado do arquivo da mensagem
+        - byte seguinte -> numero 'c' de caracteres de extensão do arquivo da mensagem
+        - próximos c bytes - extensão do arquivo da mensagem
+        - resto dos bytes - arquivo da mensagem
 '''
 def assinar_arquivo( file_name_ext:str ):
 
     # tenta ler arquivo da mensagem como bytes, retorna None em caso de erro
     try:
-        with open(file_name_ext, 'rb') as f:
+        with open(f'files/{file_name_ext}', 'rb') as f:
             msg_bytes = f.read()
     except Exception as exc:
-        print(f'\nERRO!!!:\n{exc}\n')
-        print(traceback.format_exc())
+        print(f'\nERRO!!!: {exc}')
+        print(f"TRACEBACK:\n{traceback.format_exc()}")
         return None
 
     # caso não dê erro na leitura dos bytes do arquivo:
     # calcula hash sha3-512 dos bytes do arquivo como um string
     hash_str = hashlib.sha3_512(msg_bytes).hexdigest()
 
-    # codifica string do hash calculado para bytes utf-8
+    # codifica string do hash calculado para bytes em utf-8
     hash_bytes = hash_str.encode(encoding = "utf-8")
 
     # hash_bytes = encriptar_rsa(hash_bytes, key, ...)
 
     # obtém nome e extensão do arquivo
-    file_name, _ = os.path.splitext(file_name_ext)
+    file_name, file_extension = os.path.splitext(file_name_ext)
+    num_char_file_ext = len(file_extension) - 1 # ignora o '.'
 
     # constroi sequencia de bytes do arquivo final (assinado)
-    msg_signed = hash_bytes + msg_bytes
+    msg_signed = hash_bytes + num_char_file_ext.to_bytes(1, "big") + file_extension[1:].encode(encoding = "utf-8") + msg_bytes
 
     # converte para base64
     msg_signed_b64 = base64.b64encode(msg_signed)
 
     # tenta salvar
     try:
-        with open(f'./{file_name}_signed.b64', 'wb') as f:
+        with open(f".b64/{file_name}_signed.b64", "wb") as f:
             f.write(msg_signed_b64)
-        print(f'\narquivo assinado em b64 gerado e salvo como "./{file_name}_signed.b64"\n')
+        print(f"\narquivo assinado em b64 gerado e salvo em '.b64/{file_name}_signed.b64'\n")
     except Exception as exc:
-        print(f"\nERRO!!!:\n{exc}\n")
-        print(traceback.format_exc())
+        print(f"\nERRO!!!: {exc}")
+        print(f"NÃO FOI POSSÍVEL SALVAR ARQUIVO '.b64/{file_name}_signed.b64'")
+        print(f"TRACEBACK:\n{traceback.format_exc()}")
 
 
 '''
@@ -133,27 +138,40 @@ def assinar_arquivo( file_name_ext:str ):
     dos mesmos critérios
 '''
 def verificar_assinatura( b64_file_name:str ):
-    # tenta ler arquivo .b64 como string. retorna None em caso de erro
+    # tenta ler arquivo b64 como string e arquivo da mensagem, retorna None em caso de erro
     try:
-        with open(b64_file_name, 'r') as f:
+        with open(f".b64/{b64_file_name}", "r") as f:
             b64_file = f.read()
     except Exception as exc:
-        print(f'\nERRO!!!:\n{exc}\n')
-        print(traceback.format_exc())
-        return None
+        print(f"\nERRO!!!: {exc}")
+        print(f"NÃO FOI POSSÍVEL LER ARQUIVO '.b64/{b64_file_name}'")
+        print(f"TRACEBACK:\n{traceback.format_exc()}")
+        return
     
     len_hash = 128  # quantidade fixa de caracteres do hash (deve ser do criptografado, 128 é do hash em claro)
     signed_msg_bytes = base64.b64decode(b64_file)   # decodificação base 64
-    hash_received = signed_msg_bytes[:len_hash].decode(encoding="utf-8")    # hash "recebido" no arquivo de assinatura (.b64)
+    hash_received = signed_msg_bytes[:len_hash].decode(encoding="utf-8")    # hash "recebido" no arquivo de assinatura b64
     # hash_received = decriptar(hash_received, key, ...)
-    msg_received_bytes = signed_msg_bytes[len_hash:]
+    num_char_file_ext = signed_msg_bytes[len_hash]
+    file_extension = signed_msg_bytes[len_hash+1:len_hash+1+num_char_file_ext].decode(encoding="utf-8")
+    msg_received_bytes = signed_msg_bytes[len_hash+1+num_char_file_ext:]
+    file_name = b64_file_name[:-11] # ignora o '_signed.b64'
 
     hash_calculated = hashlib.sha3_512(msg_received_bytes).hexdigest()
 
     if hash_calculated == hash_received:
-        print("assinatura validada !!! aeee :) ")
+        print("assinatura válida !!! aeee :) ")
+        try:
+            with open(f"checked_files/{file_name}.{file_extension}", "wb") as f:
+                f.write(msg_received_bytes)
+        except Exception as exc:
+            print(f"\nERRO!!!: {exc}")
+            print("NÃO FOI POSSÍVEL RESTAURAR ARQUIVO VERIFICADO")
+            print(f"TRACEBACK:\n{traceback.format_exc()}")
+            return
+        print(f"arquivo checado está restaurado em checked_files/{file_name}.{file_extension}")
     else:
-        print("assinatura invalidada !!!  :(")
+        print("assinatura invalidada !!!  :( ")
 
 
 
