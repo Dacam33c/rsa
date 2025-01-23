@@ -84,7 +84,7 @@ def makeKey(primo1,primo2):
 '''
     função para salvar a chave publica na pasta .pub e a chave privada na pasta .prv
 '''
-def salvar_chaves():
+def salvar_chaves(puk:str, prk:str) -> None:
     pass
 
 '''
@@ -100,12 +100,14 @@ def salvar_chaves():
         - próximos c bytes - extensão do arquivo da mensagem
         - resto dos bytes - arquivo da mensagem
 '''
-def assinar_arquivo( file_name_ext:str, prk:str ) -> None:
+def assinar_arquivo( file_name_ext:str, prk_file:str ) -> None:
 
-    # tenta ler arquivo da mensagem como bytes, retorna None em caso de erro
+    # tenta ler arquivo da mensagem como bytes e arquivo da chave privada, retorna None em caso de erro
     try:
-        with open(f'files/{file_name_ext}', 'rb') as f:
+        with open(f'./.files/{file_name_ext}', 'rb') as f:
             msg_bytes = f.read()
+        with open(f'./.prk/{prk_file}', 'r') as f:
+            prk = f.read()
     except Exception as exc:
         print(f'\nERRO!!!: {exc}')
         print(f"TRACEBACK:\n{traceback.format_exc()}")
@@ -146,15 +148,17 @@ def assinar_arquivo( file_name_ext:str, prk:str ) -> None:
     dos mesmos critérios.
     reconstrói o arquivo da mensagem original
 '''
-def verificar_assinatura( b64_file_name:str, puk:str ) -> None:
+def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
 
-    # tenta ler arquivo b64 como string e arquivo da mensagem, retorna None em caso de erro
+    # tenta ler arquivo b64 como string e arquivo da chave publica, retorna None em caso de erro
     try:
-        with open(f".b64/{b64_file_name}", "r") as f:
+        with open(f"./.b64/{b64_file_name}", "r") as f:
             b64_file = f.read()
+        with open(f"./.puk/{puk_file}") as f:
+            puk = f.read()
     except Exception as exc:
         print(f"\nERRO!!!: {exc}")
-        print(f"NÃO FOI POSSÍVEL LER ARQUIVO '.b64/{b64_file_name}'")
+        print(f"NÃO FOI POSSÍVEL LER ARQUIVOS './.b64/{b64_file_name}' e './.puk/{puk_file}'")
         print(f"TRACEBACK:\n{traceback.format_exc()}")
         return
     
@@ -174,67 +178,108 @@ def verificar_assinatura( b64_file_name:str, puk:str ) -> None:
         print("assinatura válida !!! aeee :) ")
         # se a assinatura for válida, reconstrói o arquivo original e tenta salvar
         try:
-            with open(f"checked_files/{file_name}.{file_extension}", "wb") as f:
+            with open(f"./.checked_files/{file_name}.{file_extension}", "wb") as f:
                 f.write(msg_received_bytes)
         except Exception as exc:
             print(f"\nERRO!!!: {exc}")
             print("NÃO FOI POSSÍVEL RESTAURAR ARQUIVO VERIFICADO")
             print(f"TRACEBACK:\n{traceback.format_exc()}")
             return
-        print(f"arquivo checado está restaurado em checked_files/{file_name}.{file_extension}")
+        print(f"arquivo verificado está restaurado em checked_files/{file_name}.{file_extension}")
     else:
         print("assinatura invalidada !!!  :( ")
 
-def opcoes_iniciais() -> int|bool :
+
+'''
+    função para printar as opções do programa para o usuário, e reagir de acordo
+'''
+def opcoes_iniciais() -> Optional[int] :
     print("\nEscolha uma opção:")
     print("1 - Gerar chaves")
     print("2 - Assinar arquivo")
     print("3 - Verificar assinatura")
-    print("4 - Sair")
+    print("\nDigite 's' para sair.")
     op = input("\n> ")
-    if not op.isalnum() or not op in ("1","2","3","4"):
+    if not op.isalnum() or not op in ("1","2","3","s","S"):
         print("Opção inválida\n\n")
-        return False
+        return 
     return op
 
-
-def opcoes_chaves_privadas() -> int|bool :
+'''
+    função para mostrar as opções de chaves privadas disponíveis para assinatura na pasta ./.prk, e
+    retornar o nome do arquivo da chave privada escolhida para a função principal
+'''
+def opcoes_chaves_privadas() -> Optional[str] :
     while True:
-        prks = os.listdir("./.puk")
-        print("\n\nEscolha uma chave privada:")
+        prks = os.listdir("./.prk")
+        print("\nEscolha umas das chaves privadas em ./.prk:")
         for idx_prk in range(len(prks)):
             print(f"{idx_prk+1} - {prks[idx_prk]}")
         print("\nDigite 'v' para voltar")
         op = input("\n> ")
-        if op.lower() == 'v': break
-        if not op.isalnum or (op-1) not in list(range(len(prks)+1)):
-            print("\nOpção inválida\n")
+        if op.lower() == 'v': return
+        if not op.isalnum or op not in [str(x) for x in list(range(1,len(prks)+1))]:
+            print("\nOpção inválida")
         else:
             prk_file = prks[int(op)-1]
-            try:
-                with open(f".prk/{prk_file}", "r") as f:
-                    prk = f.read()
-                    return prk
-            except Exception as exc:
-                print(f"\nERRO!!!: {exc}")
-                print(f"NÃO FOI POSSÍVEL ABRIR ARQUIVO {prk_file}")
-                print(f"TRACEBACK:\n{traceback.format_exc()}\n\n")
+            return prk_file
 
-def opcoes_arquivos():
-    pass
+
+'''
+    função para mostrar as opções de chaves publicas disponíveis para assinatura na pasta ./.puk, e
+    retornar o nome do arquivo da chave publica escolhida para a função principal
+'''
+def opcoes_chaves_publicas() -> Optional[str] :
+    while True:
+        puks = os.listdir("./.puk")
+        print("\nEscolha umas das chaves publicas em ./.puk:")
+        for idx_puk in range(len(puks)):
+            print(f"{idx_puk+1} - {puks[idx_puk]}")
+        print("\nDigite 'v' para voltar")
+        op = input("\n> ")
+        if op.lower() == 'v': return
+        if not op.isalnum or op not in [str(x) for x in list(range(1,len(puks)+1))]:
+            print("\nOpção inválida")
+        else:
+            puk_file = puks[int(op)-1]
+            return puk_file
+
+
+'''
+    função para mostrar as opções de arquivos disponíveis para assinatura na pasta './.files' ou
+    para verificação na pasta './.b64', e retornar o nome do arquivo escolhido para a função principal
+'''
+def opcoes_arquivos( folder:str ) -> Optional[str]:
+    while True:
+        files = os.listdir(folder)
+        print(f"\nEscolha um dos arquivos em '{folder}':")
+        for idx_file in range(len(files)):
+            print(f"{idx_file+1} - {files[idx_file]}")
+        print("\nDigite 'v' para voltar")
+        op = input("\n> ")
+        if op.lower() == 'v': return
+        if not op.isalnum or op not in [str(x) for x in list(range(1,len(files)+1))]:
+            print("\nOpção inválida")
+        else:
+            file_name = files[int(op)-1]
+            return file_name
 
 def main():
     while True:
         op = opcoes_iniciais()
-        if op=="4": 
-            print("\nEncerrando...")
-            break
-        if op=="2":
+        if op.lower()=='s': return(print("\nEncerrando...\n"))
+
+        if op == "1": salvar_chaves(makeKey())
+        elif op == "2":
             prk = opcoes_chaves_privadas()
             if prk:
-                print(prk)
-                file = opcoes_arquivos()
-                
+                file_name = opcoes_arquivos('./.files')
+                if file_name: assinar_arquivo(file_name, prk)
+        elif op=="3":
+            puk = opcoes_chaves_publicas()
+            if puk:
+                file_name = opcoes_arquivos('./.b64')
+                if file_name: verificar_assinatura(file_name, puk)
             
     
 
