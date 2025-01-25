@@ -44,7 +44,7 @@ def MillerRabin(n, iteracoes):
     return True
 
 def GeradorPrimos():
-    teste = 0;
+    teste = 0
     while(True):
         n = randint(2**1024,(2**1025)-1)
         teste +=1
@@ -136,7 +136,7 @@ def assinar_arquivo( file_name_ext:str, prk_file:str ) -> None:
     try:
         with open(f".b64/{file_name}_signed.b64", "wb") as f:
             f.write(msg_signed_b64)
-        print(f"\narquivo assinado em b64 gerado e salvo em '.b64/{file_name}_signed.b64'\n")
+        print(f"\narquivo assinado e convertido para base 64 gerado e salvo em '.b64/{file_name}_signed.b64'\n")
     except Exception as exc:
         print(f"\nERRO!!!: {exc}")
         print(f"NÃO FOI POSSÍVEL SALVAR ARQUIVO '.b64/{file_name}_signed.b64'")
@@ -174,20 +174,26 @@ def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
     # calcula hash da mensagem recebida
     hash_calculated = hashlib.sha3_512(msg_received_bytes).hexdigest()
 
+    validated = True
+
     if hash_calculated == hash_received:
-        print("assinatura válida !!! aeee :) ")
-        # se a assinatura for válida, reconstrói o arquivo original e tenta salvar
-        try:
-            with open(f"./.checked_files/{file_name}.{file_extension}", "wb") as f:
-                f.write(msg_received_bytes)
-        except Exception as exc:
+        print("\nassinatura válida !!! aeee :) ")
+    else:
+        print("\nassinatura invalidada !!!  :( ")
+        validated = False
+
+    print('\nRestaurando arquivo...')
+
+    try:
+        with open(f"./.checked_files/{file_name}_{puk_file[:-4]}_{'validated' if validated else 'invalidated'}.{file_extension}", "wb") as f:
+            f.write(msg_received_bytes)
+    except Exception as exc:
             print(f"\nERRO!!!: {exc}")
             print("NÃO FOI POSSÍVEL RESTAURAR ARQUIVO VERIFICADO")
             print(f"TRACEBACK:\n{traceback.format_exc()}")
             return
-        print(f"arquivo verificado está restaurado em checked_files/{file_name}.{file_extension}")
-    else:
-        print("assinatura invalidada !!!  :( ")
+    
+    print(f"\narquivo verificado está restaurado em checked_files/{file_name}.{file_extension}")
 
 
 '''
