@@ -84,8 +84,13 @@ def makeKey(primo1,primo2):
 '''
     função para salvar a chave publica na pasta .pub e a chave privada na pasta .prv
 '''
+
+##################################################
+##################################################
 def salvar_chaves(puk:str, prk:str) -> None:
     pass
+###################################################
+###################################################
 
 '''
     função para ler a chave privada
@@ -275,7 +280,8 @@ def main():
         op = opcoes_iniciais()
         if op.lower()=='s': return(print("\nEncerrando...\n"))
 
-        if op == "1": salvar_chaves(makeKey())
+        if op == "1":
+            salvar_chaves(makeKey())
         elif op == "2":
             prk = opcoes_chaves_privadas()
             if prk:
