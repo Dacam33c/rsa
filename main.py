@@ -46,7 +46,7 @@ def MillerRabin(n, iteracoes):
 def GeradorPrimos():
     teste = 0
     while(True):
-        n = randint(2**1024,(2**1025)-1)
+        n = randint(2**1023,(2**1024)-1)
         teste +=1
         if(MillerRabin(n,10)):
             return n
@@ -76,10 +76,34 @@ def makeKey(primo1,primo2):
     print("phi:", phi)
     print("chave pública e:",e)
     print("chave privada d:",d)
-    return e,d
+    return e,n,d
 
 
-# publicKey,privateKey = makeKey(GeradorPrimos(),GeradorPrimos())
+# publicKey(e),publicExp(n),privateKey(d) = makeKey(GeradorPrimos(),GeradorPrimos())
+
+#função de encriptação. recebe um texto qualuqer, chave publica "e" e expoente publico "n"
+def encriptar(mensagem, e, n):
+    encriptado = []
+    #itera por cada caractere no texto em claro
+    for caractere in mensagem:
+        #c = numero equivalente ao caractere caractere
+        c = ord(caractere)
+        #adiciona na lista o caractere "c" elevado a "e" e no modulo "n"
+        encriptado.append(pow(c,e,n))
+
+    return(encriptado)
+
+#função de decriptaçao. recebe texto encriputado(lista), chave privada "d" e expoente publico "n"
+def decriptar(textoEncriptado, d, n):
+    decriptado = ""
+    for caractere in textoEncriptado:
+        #c = caractere elevado a "d" modulo "n"
+        c = pow(caractere,d,n)
+        decriptado = decriptado + chr(c)
+    
+    return(decriptado)
+
+
 
 '''
     função para salvar a chave publica na pasta .pub e a chave privada na pasta .prv
@@ -270,7 +294,7 @@ def opcoes_arquivos( folder:str ) -> Optional[str]:
             file_name = files[int(op)-1]
             return file_name
 
-def main():
+def main():    
     while True:
         op = opcoes_iniciais()
         if op.lower()=='s': return(print("\nEncerrando...\n"))
