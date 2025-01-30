@@ -1,18 +1,12 @@
 
 from random import randint
 import random as rand
-
 import os
 import base64
 import hashlib
 import traceback
 from typing import *
 
-def binToString(bin0,size):
-    string = str(bin0)[2:]
-    while(len(string) < size):
-        string = "0" + string
-    return string
 
 def MillerRabin(n, iteracoes):
     #n = numero testado
@@ -73,37 +67,101 @@ def makeKey(primo1,primo2):
     #significa que, ao multiplicar d * e e entao tirar mod phi o resultado será 1
     
     d = pow(e, -1, phi)
-    print("phi:", phi)
-    print("chave pública e:",e)
-    print("chave privada d:",d)
+    #print("phi:", phi)
+    #print("chave pública e:",e)
+    #print("chave privada d:",d)
     return e,n,d
 
 
 # publicKey(e),publicExp(n),privateKey(d) = makeKey(GeradorPrimos(),GeradorPrimos())
 
-#função de encriptação. recebe um texto qualuqer, chave publica "e" e expoente publico "n"
+#função de encriptação. recebe um texto com hash OAEP, chave publica "e" e expoente publico "n"
 def encriptar(mensagem, e, n):
-    encriptado = []
-    #itera por cada caractere no texto em claro
-    for caractere in mensagem:
-        #c = numero equivalente ao caractere caractere
-        c = ord(caractere)
-        #adiciona na lista o caractere "c" elevado a "e" e no modulo "n"
-        encriptado.append(pow(c,e,n))
+    #transforma a mensagem codificada em um tipo que podemos operar
+    msg = int.from_bytes(mensagem, 'big')
+    #msg elevado a "e" no modulo "n"
+    msgEncriptada = pow(msg,e,n)
+    #retorna a mensagem com rsa e OAEP aplicados
+    return(msgEncriptada)
 
-    return(encriptado)
-
-#função de decriptaçao. recebe texto encriputado(lista), chave privada "d" e expoente publico "n"
+#função de decriptaçao. recebe texto encriputado e com OAEP, chave privada "d" e expoente publico "n"
 def decriptar(textoEncriptado, d, n):
-    decriptado = ""
-    for caractere in textoEncriptado:
-        #c = caractere elevado a "d" modulo "n"
-        c = pow(caractere,d,n)
-        decriptado = decriptado + chr(c)
+    #texto elevado a "d" no modulo "n"
+    msg = pow(textoEncriptado, d, n)
+    #tamanho da mensagem
+    tamanho = (n.bit_length() + 7) // 8
+    #converte para bytes
+    msgDecriptadaOAEP = msg.to_bytes(tamanho, 'big')
+    #retorna a mensagem, com rsa decriptado mas ainda com OAEP
+    return msgDecriptadaOAEP
     
-    return(decriptado)
+
+def mask(seed, length, hash_func=hashlib.sha256):
+    counter = 0
+    output = b''
+    while len(output) < length:
+        counter_bytes = counter.to_bytes(4, 'big')
+        output += hash_func(seed + counter_bytes).digest()
+        counter += 1
+    return output[:length]
+
+def encode(message, k, hash_func=hashlib.sha256):
+    hashLen = hash_func().digest_size  # 32 bytes
+    messageLen = len(message)
+    label = b''
+
+    if messageLen > k - 2 * hashLen - 2:
+        raise ValueError("mensagem muito longa")
+        return 1
+    
+    #gera string aleatoria
+    seed = os.urandom(hashLen)
+    #aplica função de rash e armazena o valor em bytes
+    labelHash = hash_func(label).digest()
+
+    #cria um bloco de dados do tamanho certo com label na frente
+    ps = b'\x00' * (k - messageLen - 2 * hashLen - 2)
+    db = labelHash + ps + b'\x01' + message.encode(encoding="utf-8")
+
+    #aplica mascara ao data block
+    dbMask = mask(seed, len(db), hash_func)
+    maskeddb = bytes(a ^ b for a, b in zip(db, dbMask))
+
+    #aplica mascara a seed
+    seedMask = mask(maskeddb, hashLen, hash_func)
+    maskedSeed = bytes(a^b for a,b in zip(seed,seedMask))
+
+    return b'\x00' + maskedSeed + maskeddb
+
+def decode(message,k, hash_func=hashlib.sha256):
+    label = b''
+    hashLen = hash_func().digest_size
+    if len(message) != k:
+        raise ValueError("tamanho incorreto")
+
+    #separando componentes
+    _, maskedSeed, maskeddb = message[0], message[1:hashLen+1], message[hashLen+1:]
+
+    #recuperando seed
+    seedMask = mask(maskeddb, hashLen, hash_func)
+    seed = bytes(a ^ b for a, b in zip(maskedSeed, seedMask))
 
 
+    #recuperando data block
+    dbMask = mask(seed, len(maskeddb), hash_func)
+    db = bytes(a ^ b for a, b in zip(maskeddb, dbMask))
+
+    #extraindo mensagem
+    tamanhoHash = hash_func(label).digest()
+    if db[:hashLen] != tamanhoHash:
+        raise ValueError("label hash incorreto")
+
+    #encontrando \x01 e extraindo mensagem
+    index = db.find(b'\x01', hashLen)
+    if index == -1:
+        raise ValueError("formato invalido")
+    
+    return db[index+1:]
 
 '''
     função para salvar a chave publica na pasta .pub e a chave privada na pasta .prv
@@ -294,7 +352,23 @@ def opcoes_arquivos( folder:str ) -> Optional[str]:
             file_name = files[int(op)-1]
             return file_name
 
+#GeradorPrimos() gera um número primo de 1024 bits
+#makeKey() recebe dois primos e retorna e,n,d
+#encode aplica codigicação OAEP
+#decode remove OAEP
+#encriptar recebe mensagem com OAEP, e, n. retorna mensagem encriptada por rsa
+#decriptar recebe mensagem encriptada e com OAEP, e, d. retorna mensagem apenas com OAEP aplicado
 def main():    
+    #exemplo do funcionamento
+    #e,n,d = makeKey(GeradorPrimos(),GeradorPrimos())
+    #message = "teste"    
+    #encoded_msg = encode(message, (e.bit_length() + 7) // 8)
+    #encriptada = encriptar(encoded_msg,e,n)
+    #decriptada = decriptar(encriptada,d,n)
+    #decoded_msg = decode(decriptada, (e.bit_length() + 7) // 8)
+    #print(decoded_msg)
+
+
     while True:
         op = opcoes_iniciais()
         if op.lower()=='s': return(print("\nEncerrando...\n"))
@@ -316,3 +390,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
