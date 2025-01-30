@@ -163,31 +163,18 @@ def decode(message,k, hash_func=hashlib.sha256):
     
     return db[index+1:]
 
-'''
-    função para salvar a chave publica na pasta .pub e a chave privada na pasta .prv
-'''
 
-##################################################
-##################################################
-def salvar_chaves(puk:str, prk:str) -> None:
-    pass
-###################################################
-###################################################
-
-'''
-    função para ler a chave privada
-'''
-
-''' 
-    função pra assinar um arquivo, gerando um arquivo em base 64 da mensagem (bytes do arquivo),
-    hash da mensagem e os outras informações para verificação.
-    o arquivo resultante terá a extensão '.b64' e possuirá a seguinte estrutrura:
-        - primeiros n (tamanho fixo) bytes -> hash criptografado do arquivo da mensagem
-        - byte seguinte -> numero 'c' de caracteres de extensão do arquivo da mensagem
-        - próximos c bytes - extensão do arquivo da mensagem
-        - resto dos bytes - arquivo da mensagem
-'''
 def assinar_arquivo( file_name_ext:str, prk_file:str ) -> None:
+
+    ''' 
+        função pra assinar um arquivo, gerando um arquivo em base 64 da mensagem (bytes do arquivo),
+        hash da mensagem e os outras informações para verificação.
+        o arquivo resultante terá a extensão '.b64' e possuirá a seguinte estrutrura:
+            - primeiros n (tamanho fixo) bytes -> hash criptografado do arquivo da mensagem
+            - byte seguinte -> numero 'c' de caracteres de extensão do arquivo da mensagem
+            - próximos c bytes - extensão do arquivo da mensagem
+            - resto dos bytes - arquivo da mensagem
+    '''
 
     # tenta ler arquivo da mensagem como bytes e arquivo da chave privada, retorna None em caso de erro
     try:
@@ -298,6 +285,36 @@ def opcoes_iniciais() -> Optional[int] :
         return 
     return op
 
+def salvar_chaves() -> None:
+    '''
+        função para salvar a chave publica na pasta .pub e a chave privada na pasta .prv
+    '''
+    while True:
+        print('\nEscolha um nome para o arquivos das chaves pública e privada.')
+        print('Obs: O nome deve conter apenas caracteres alfabéticos e ter no mínimo 2 e no máximo 255 caracteres.\n')
+        print("Digite 'v' para voltar.")
+        entrada = input('>')
+
+        if entrada.lower() == 'v': return
+        if not entrada.isalpha or not 2<len(entrada)<256:
+            print('O nome deve conter apenas caracteres alfabéticos e ter no mínimo 2 e no máximo 255 caracteres.\n')
+        else:
+            name = entrada
+            print('Gerando chaves...')
+            puk, n, prk = makeKey(GeradorPrimos(), GeradorPrimos())
+
+            try:
+                with open(f'./puk/{name}.puk', 'w') as f:
+                    f.write(hex(puk)[2:])
+                    f.write(hex(n)[2:])
+            except Exception as exc:
+                print(f"\nERRO!!!: {exc}")
+                print("NÃO FOI POSSÍVEL SALVAR CHAVES")
+                print(f"TRACEBACK:\n{traceback.format_exc()}")
+                return
+
+
+
 '''
     função para mostrar as opções de chaves privadas disponíveis para assinatura na pasta ./.prk, e
     retornar o nome do arquivo da chave privada escolhida para a função principal
@@ -379,7 +396,7 @@ def main():
         if op.lower()=='s': return(print("\nEncerrando...\n"))
 
         if op == "1":
-            salvar_chaves(makeKey())
+            name_file = salvar_chaves()
         elif op == "2":
             prk = opcoes_chaves_privadas()
             if prk:
