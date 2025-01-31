@@ -133,7 +133,7 @@ def encode(message, k, hash_func=hashlib.sha3_256):
 
     return b'\x00' + maskedSeed + maskeddb
 
-def decode(message,k, hash_func=hashlib.sha3_256):
+def decode(message, k, hash_func=hashlib.sha3_256):
     label = b''
     hashLen = hash_func().digest_size
     if len(message) != k:
@@ -167,7 +167,12 @@ def decode(message,k, hash_func=hashlib.sha3_256):
     index = db.find(b'\x01', hashLen)
     if index == -1:
         raise ValueError("formato invalido")
+
     
+
+    print(f'db[index+1:] = {db[index+1:]}\n')
+    print(f'db = {db}')
+
     return db[index+1:]
 
 
