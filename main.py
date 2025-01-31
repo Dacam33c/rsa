@@ -105,7 +105,7 @@ def mask(seed, length, hash_func=hashlib.sha3_256):
         counter += 1
     return output[:length]
 
-def encode(message, k, hash_func=hashlib.sha3_256):
+def encode_oaep(message, k, hash_func=hashlib.sha3_256):
     hashLen = hash_func().digest_size  # 32 bytes
     messageLen = len(message)
     label = b''
@@ -133,8 +133,9 @@ def encode(message, k, hash_func=hashlib.sha3_256):
 
     return b'\x00' + maskedSeed + maskeddb
 
-def decode(message, k, hash_func=hashlib.sha3_256):
-    label = b''
+def decode_oeap(message, k, hash_func=hashlib.sha3_256):
+
+    label = b'' 
     hashLen = hash_func().digest_size
     if len(message) != k:
         raise ValueError("tamanho incorreto")
@@ -150,28 +151,17 @@ def decode(message, k, hash_func=hashlib.sha3_256):
     dbMask = mask(seed, len(maskeddb), hash_func)
     db = bytes(a ^ b for a, b in zip(maskeddb, dbMask))
 
-    #extraindo mensagem
-    tamanhoHash = hash_func(label).digest()
+    # hash da label vazia
+    hash_label = hash_func(label).digest()
 
-    print(f"\ntamanhoHash = {tamanhoHash}")
-    print(f"len(tamanhoHash) = {len(tamanhoHash)}")
-    print(f"\ndb[:hashLen] = {db[:hashLen]}")
-    print(f"type(db[:hashLen]) = {len(db[:hashLen])}")
-    print(f'\n\niguais? {db[:hashLen] == tamanhoHash}')
-    
-
-    if db[:hashLen] != tamanhoHash:
-        raise ValueError("label hash incorreto")
+    if db[:hashLen] != hash_label:
+        # erro de decriptação
+        return False
 
     #encontrando \x01 e extraindo mensagem
     index = db.find(b'\x01', hashLen)
     if index == -1:
         raise ValueError("formato invalido")
-
-    
-
-    print(f'db[index+1:] = {db[index+1:]}\n')
-    print(f'db = {db}')
 
     return db[index+1:]
 
@@ -206,19 +196,13 @@ def assinar_arquivo( file_name_ext:str, prk_file:str ) -> None:
     # caso não dê erro na leitura dos bytes do arquivo:
     # calcula hash sha3_256 dos bytes do arquivo como um string
     hash_str = hashlib.sha3_256(file_bytes).hexdigest()
-    
-    print(f'\nhash_str = {hash_str}')
 
     # codificação OAEP e encriptação (assinatura com a chave privada)
-    hash_bytes_encod = encode(hash_str, (d.bit_length() + 7) // 8)
+    hash_bytes_encod = encode_oaep(hash_str, (d.bit_length() + 7) // 8)
     hash_bytes_cript = str(encriptar(hash_bytes_encod, d, n)).encode("utf-8")
-
-    print(f'\nhash_bytes_cript = {hash_bytes_cript}')
 
     # obtem representação em bytes do tamnho do hash encriptado
     len_hash_bytes_cript = len(hash_bytes_cript).to_bytes(2, "big")
-
-    print(f'\nlen_hash_bytes_cript = {len_hash_bytes_cript}')
 
     # concatena comprimento do hash e o hash
     msg_1 = len_hash_bytes_cript + hash_bytes_cript
@@ -269,9 +253,6 @@ def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
     e = int(puk[0], 16)
     n = int(puk[1], 16)
 
-    print(f'\ne = {e}')
-    print(f'\nn = {n}')
-
     # decodifica arquivo base 64 'recebido'
     msg_bytes = base64.b64decode(b64_file)
 
@@ -280,14 +261,12 @@ def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
 
     # extrai hash criptografado
     hash_received_encrp = msg_bytes[2:2+len_hash_crip]
-    print(f'\nhash_received_encrp = {hash_received_encrp}')
 
     # decriptografa com a chave pública (e,n)
     hash_received_decrp = decriptar(int(hash_received_encrp), e, n)
-    print(f'\nhash_received_decrp = {hash_received_decrp}')
 
     # decodifica OAEP (e depois utf-8)
-    hash_received = decode(hash_received_decrp, (e.bit_length() + 7) // 8).decode("utf-8")
+    hash_received = decode_oeap(hash_received_decrp, (e.bit_length() + 7) // 8)
 
     # extrai numero de caracteres da extensão do arquivo
     num_char_file_ext = int.from_bytes(msg_bytes[2+len_hash_crip:1+2+len_hash_crip],"big")
@@ -302,13 +281,10 @@ def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
     file_name = b64_file_name[:-11]
 
     # calcula hash da mensagem recebida
-    hash_calculated = hashlib.sha3_256(file_received_bytes).hexdigest()
+    hash_calculated = hashlib.sha3_256(file_received_bytes).hexdigest().encode()
 
     # flag
     validated = True
-
-    print(f'\nhash_calculated = {hash_calculated}')
-    print(f'\nhash_received = {hash_received}')
 
     # compara os hashes (verifica assinatura)
     if hash_calculated == hash_received:
