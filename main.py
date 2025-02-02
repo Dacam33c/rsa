@@ -23,13 +23,18 @@ def MillerRabin(n, iteracoes):
     while s % 2 == 0:
         r += 1
         s //= 2
-
+        
+    #realisando o teste por um numero de iterações
     for _ in range(iteracoes):
+        #'a' é um numero aleatorio entre 2 e o 'n' -2 testado
         a = rand.randint(2, n - 2)
+        #x = 'a' elevado a 's' modulo 'n'
         x = pow(a, s, n)
         if x == 1 or x == n - 1:
             continue
+        
         for _ in range(r - 1):
+            #x = 'x' elevado a 2 modulo 'n'
             x = pow(x, 2, n)
             if x == n - 1:
                 break
@@ -39,24 +44,32 @@ def MillerRabin(n, iteracoes):
 
 def GeradorPrimos():
     teste = 0
+    #repete indefinidamente o loop até achar um primo
     while(True):
+        #pega um 'n' aleatorio
         n = randint(2**1023,(2**1024)-1)
         teste +=1
+        #testa se é primo por miller rabin. mais iteraçoes = mais preciso
         if(MillerRabin(n,10)):
             return n
 
+#funçao de eclides retorna, retorna true se o mdc(n1,n2) = 1, ou seja, sao coprimos
 #N1 deve ser maior que N2
 def euclides(n1,n2):
     while(n2 != 0):
         n1, n2 = n2, n1 % n2
     return n1 == 1
     
+#usa as funçoes anteriores para gerar as chave publica e privada
 def makeKey(primo1,primo2):
+    #garante que os primos nao sejam iguais
     if (primo1 == primo2):
         print("primos aleatórios iguais")
         return 0
     
+    
     n = primo1 * primo2
+    #totiente de euler(n) usado no rsa
     phi = (primo1 - 1) * (primo2 - 1)
     e = randint(1,phi)
     
@@ -98,18 +111,24 @@ def decriptar(textoEncriptado, e, n):
 
 def mask(seed, length, hash_func=hashlib.sha3_256):
     counter = 0
+    #inicia com bytes vazios
     output = b''
+    #o loop continua até ter a quantia certa de bytes
     while len(output) < length:
+        #converte o contador para bytes
         counter_bytes = counter.to_bytes(4, 'big')
+        #adiciona o resultado da funçao de hash com a seed + contador, garantindo que o resultado nao seja igual
         output += hash_func(seed + counter_bytes).digest()
         counter += 1
+    #retorna o resultado do tamanho desejado
     return output[:length]
 
 def encode_oaep(message, k, hash_func=hashlib.sha3_256):
     hashLen = hash_func().digest_size  # 32 bytes
     messageLen = len(message)
     label = b''
-
+    
+    #checa se a mensagem nao e muito grande
     if messageLen > k - 2 * hashLen - 2:
         raise ValueError("mensagem muito longa")
         return 1
@@ -130,13 +149,15 @@ def encode_oaep(message, k, hash_func=hashlib.sha3_256):
     #aplica mascara a seed
     seedMask = mask(maskeddb, hashLen, hash_func)
     maskedSeed = bytes(a^b for a,b in zip(seed,seedMask))
-
+    
+    #retorna os bytes da seed + data block mascarados
     return b'\x00' + maskedSeed + maskeddb
 
 def decode_oeap(message, k, hash_func=hashlib.sha3_256):
 
     label = b'' 
     hashLen = hash_func().digest_size
+    #checando tamanho da mensagem
     if len(message) != k:
         raise ValueError("tamanho incorreto")
 
