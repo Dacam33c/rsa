@@ -4,7 +4,7 @@ João Pedro Carvalho de Oliveira Rodrigues 221017032
 Gabriel Maurício Chagas 221017097
 Segurança computacional noturno
 
-O programa em python relaiza a geração de chaves privada e pública aleatórias, codificação e decodificação OAEP, encriptação e decriptação RSA, com o propósito de assinar digitalmente e virificar a assinatura de artquivos.
+O programa em python relaiza a geração de chaves privada e pública aleatórias, codificação e decodificação OAEP, encriptação e decriptação RSA, com o propósito de assinar digitalmente e virificar a assinatura de arquivos.
 
 Como usar:
 
