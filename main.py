@@ -59,7 +59,7 @@ def makeKey(primo1,primo2):
     n = primo1 * primo2
     phi = (primo1 - 1) * (primo2 - 1)
     e = randint(1,phi)
-    #CHAMAR FUNÇÃO DE EUCLIDES COM N1>N2!!!!!!!!!
+    
     while (not euclides(phi,e)):
         e = randint(1,phi)
         
@@ -338,7 +338,11 @@ def salvar_chaves() -> None:
         else:
             name = entrada
             print("\nGerando chaves...")
-            puk, n, prk = makeKey(GeradorPrimos(), GeradorPrimos())
+            while True:
+                output = makeKey(GeradorPrimos(), GeradorPrimos())
+                if output:
+                    puk, n, prk = output
+                    break
             try:
                 with open(f"./.puk/{name}.puk", "w") as f:
                     f.writelines([hex(puk)[2:], "\n", hex(n)[2:]])
