@@ -231,12 +231,14 @@ def assinar_arquivo( file_name_ext:str, prk_file:str ) -> None:
         print(f"TRACEBACK:\n{traceback.format_exc()}")
 
 
-'''
+
+def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
+
+    '''
     função para verificar a assinatura, decodificando o arquivo b64 gerado na função anterior, a partir
     dos mesmos critérios.
     reconstrói o arquivo da mensagem original
-'''
-def verificar_assinatura( b64_file_name:str, puk_file:str ) -> None:
+    '''
 
     # tenta ler arquivo b64 como string e arquivo da chave publica, retorna None em caso de erro
     try:
