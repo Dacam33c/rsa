@@ -96,7 +96,7 @@ def decriptar(textoEncriptado, e, n):
     return msgDecriptadaOAEP
     
 
-def mask(seed, length, hash_func=hashlib.sha3_256):
+def mgf(seed, length, hash_func=hashlib.sha3_256):
     counter = 0
     output = b''
     while len(output) < length:
@@ -124,11 +124,11 @@ def encode_oaep(message, k, hash_func=hashlib.sha3_256):
     db = labelHash + ps + b'\x01' + message.encode(encoding="utf-8")
 
     #aplica mascara ao data block
-    dbMask = mask(seed, len(db), hash_func)
+    dbMask = mgf(seed, len(db), hash_func)
     maskeddb = bytes(a ^ b for a, b in zip(db, dbMask))
 
     #aplica mascara a seed
-    seedMask = mask(maskeddb, hashLen, hash_func)
+    seedMask = mgf(maskeddb, hashLen, hash_func)
     maskedSeed = bytes(a^b for a,b in zip(seed,seedMask))
 
     return b'\x00' + maskedSeed + maskeddb
@@ -144,11 +144,11 @@ def decode_oeap(message, k, hash_func=hashlib.sha3_256):
     _, maskedSeed, maskeddb = message[0], message[1:hashLen+1], message[hashLen+1:]
 
     #recuperando seed
-    seedMask = mask(maskeddb, hashLen, hash_func)
+    seedMask = mgf(maskeddb, hashLen, hash_func)
     seed = bytes(a ^ b for a, b in zip(maskedSeed, seedMask))
 
     #recuperando data block
-    dbMask = mask(seed, len(maskeddb), hash_func)
+    dbMask = mgf(seed, len(maskeddb), hash_func)
     db = bytes(a ^ b for a, b in zip(maskeddb, dbMask))
 
     # hash da label vazia
@@ -368,6 +368,10 @@ def salvar_chaves() -> None:
 def opcoes_chaves_privadas() -> Optional[str] :
     while True:
         prks = os.listdir("./.prk")
+        if not prks:
+            print("\nNenhum par de chaves foi gerado.")
+            print("Gere um par de chaves antes de verificar alguma assinatura.")
+            return
         print("\nEscolha umas das chaves privadas em ./.prk:")
         for idx_prk in range(len(prks)):
             print(f"{idx_prk+1} - {prks[idx_prk]}")
@@ -388,6 +392,10 @@ def opcoes_chaves_privadas() -> Optional[str] :
 def opcoes_chaves_publicas() -> Optional[str] :
     while True:
         puks = os.listdir("./.puk")
+        if not puks:
+            print("\nNenhum par de chaves foi gerado.")
+            print("Gere um par de chaves antes de assinar algum arquivo.")
+            return
         print("\nEscolha umas das chaves publicas em ./.puk:")
         for idx_puk in range(len(puks)):
             print(f"{idx_puk+1} - {puks[idx_puk]}")
@@ -409,6 +417,10 @@ def opcoes_arquivos( folder:str ) -> Optional[str]:
     while True:
         files = os.listdir(folder)
         print(f"\nEscolha um dos arquivos em '{folder}':")
+        if not files:
+            print(f"\nNão foi encontrado nenhum arquivo em '{folder}'")
+            print(f"Insira ou gere algum antes de prosseguir.")
+            return 
         for idx_file in range(len(files)):
             print(f"{idx_file+1} - {files[idx_file]}")
         print("\nDigite 'v' para voltar")
